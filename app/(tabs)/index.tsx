@@ -1,98 +1,78 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, FlatList, ActivityIndicator, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { MOCK_ALERTS, Alert } from '@/constants/mock-data';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import AlertItem from '@/components/AlertItem';
+
+const PAGE_SIZE = 10;
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [alerts, setAlerts] = useState<Alert[]>(() => MOCK_ALERTS.slice(0, PAGE_SIZE));
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const colorScheme = useColorScheme();
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const loadMoreAlerts = useCallback(() => {
+    if (isLoading || alerts.length >= MOCK_ALERTS.length) {
+      return;
+    }
+    setIsLoading(true);
+    const nextPage = page + 1;
+    const newAlerts = MOCK_ALERTS.slice(0, nextPage * PAGE_SIZE);
+    // Simulate network request
+    setTimeout(() => {
+      setAlerts(newAlerts);
+      setPage(nextPage);
+      setIsLoading(false);
+    }, 500);
+  }, [isLoading, page, alerts.length]);
+
+  const renderFooter = () => {
+    if (!isLoading) return null;
+    return <ActivityIndicator style={{ marginVertical: 20 }} size="large" />;
+  };
+
+  const renderItem = ({ item }: { item: Alert }) => <AlertItem item={item} />;
+
+  return (
+    <ThemedView style={styles.container}>
+      <View style={[styles.header, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+        <ThemedText type="title" style={styles.logo}>SnapSentinel</ThemedText>
+      </View>
+      <FlatList
+        data={alerts}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContainer}
+        onEndReached={loadMoreAlerts}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={renderFooter}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 16,
     alignItems: 'center',
-    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#3a3a3c', 
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  logo: {
+    fontSize: 28,
+    fontWeight: 'bold',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 30, // Added padding to avoid footer being too close to the edge
   },
 });
