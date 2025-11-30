@@ -4,9 +4,9 @@
  */
 
 import { Platform } from 'react-native';
+import { Theme } from '@react-navigation/native';
 
 const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
@@ -26,6 +26,19 @@ export const Colors = {
     tabIconSelected: '#00A7E1',
   },
 };
+
+export const SnapSentinelDarkTheme: Theme = {
+  dark: true,
+  colors: {
+    primary: Colors.dark.tint,
+    background: Colors.dark.background,
+    card: '#2C2C2E', // A slightly lighter shade for card-like elements
+    text: Colors.dark.text,
+    border: '#3A3A3C', // A subtle border color
+    notification: Colors.dark.tint,
+  },
+};
+
 
 export const Fonts = Platform.select({
   ios: {

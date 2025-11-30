@@ -1,56 +1,53 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MOCK_ALERTS, Alert } from '@/constants/mock-data';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAlerts, type Alert } from '@/hooks/use-alerts';
 import AlertItem from '@/components/AlertItem';
-
-const PAGE_SIZE = 10;
+import HamburgerMenu from '@/components/HamburgerMenu';
 
 export default function HomeScreen() {
-  const [alerts, setAlerts] = useState<Alert[]>(() => MOCK_ALERTS.slice(0, PAGE_SIZE));
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const colorScheme = useColorScheme();
+  // Use the custom hook to fetch alert data from the API.
+  // This encapsulates all logic for fetching, loading, and error handling.
+  const { alerts, isLoading, error } = useAlerts();
 
-  const loadMoreAlerts = useCallback(() => {
-    if (isLoading || alerts.length >= MOCK_ALERTS.length) {
-      return;
-    }
-    setIsLoading(true);
-    const nextPage = page + 1;
-    const newAlerts = MOCK_ALERTS.slice(0, nextPage * PAGE_SIZE);
-    // Simulate network request
-    setTimeout(() => {
-      setAlerts(newAlerts);
-      setPage(nextPage);
-      setIsLoading(false);
-    }, 500);
-  }, [isLoading, page, alerts.length]);
+  // Show a loading spinner while the initial data is being fetched.
+  if (isLoading && !alerts.length) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" />
+      </ThemedView>
+    );
+  }
 
-  const renderFooter = () => {
-    if (!isLoading) return null;
-    return <ActivityIndicator style={{ marginVertical: 20 }} size="large" />;
-  };
+  // Show an error message if the data fetching fails.
+  if (error) {
+    return (
+      <ThemedView style={[styles.container, styles.center]}>
+        <ThemedText>Error fetching alerts.</ThemedText>
+        <ThemedText>{error.message}</ThemedText>
+      </ThemedView>
+    );
+  }
 
-  const renderItem = ({ item }: { item: Alert }) => <AlertItem item={item} />;
+  const renderItem = ({ item, index }: { item: Alert; index: number }) => (
+    <AlertItem item={item} index={index} />
+  );
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.header, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
+      <ThemedView style={styles.header}>
         <ThemedText type="title" style={styles.logo}>SnapSentinel</ThemedText>
-      </View>
+      </ThemedView>
       <FlatList
         data={alerts}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
-        onEndReached={loadMoreAlerts}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={renderFooter}
+        // NOTE: Pagination/infinite scroll is removed for now as the API
+        // does not currently support it. A pull-to-refresh could be added here.
       />
+      <HamburgerMenu />
     </ThemedView>
   );
 }
@@ -59,13 +56,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 16,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#3a3a3c', 
+    borderBottomColor: '#3a3a3c',
   },
   logo: {
     fontSize: 28,
@@ -73,6 +74,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 30, // Added padding to avoid footer being too close to the edge
+    paddingBottom: 30,
   },
 });
+
