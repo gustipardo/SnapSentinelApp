@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Constants from 'expo-constants';
 
 // The Alert type expected by the UI components.
 export interface Alert {
@@ -23,7 +24,7 @@ interface ApiAlert {
   image_url: string;
 }
 
-const API_URL = 'https://5tunl41q86.execute-api.us-east-1.amazonaws.com/alerts';
+const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 /**
  * Transforms a single alert object from the API into the shape expected by the UI.
@@ -67,8 +68,11 @@ export const useAlerts = () => {
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
+        if (!API_URL) {
+          throw new Error('API_URL is not defined in app.config');
+        }
         setIsLoading(true);
-        const response = await fetch(API_URL);
+        const response = await fetch(String(API_URL));
         if (!response.ok) {
           throw new Error('Failed to fetch alerts from API');
         }

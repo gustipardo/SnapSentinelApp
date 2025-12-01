@@ -1,24 +1,25 @@
+import { Colors } from '@/constants/theme';
+import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
-import { View, StyleSheet, Pressable, Dimensions, Modal } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  interpolate,
-  FadeIn,
-  FadeOut,
-  SlideInRight,
-  SlideOutRight,
-  runOnJS,
-} from 'react-native-reanimated';
+import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
 import {
   Gesture,
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { BlurView } from 'expo-blur';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  SharedValue,
+  SlideInRight,
+  SlideOutRight,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { ThemedText } from './themed-text';
-import { Colors } from '@/constants/theme';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BAR_HEIGHT = 3;
@@ -30,7 +31,7 @@ const BAR_SPACING = 5;
  * This is separated to avoid duplicating the animation logic.
  * It's animated based on a 'progress' shared value (0 = hamburger, 1 = X).
  */
-const AnimatedIcon = ({ progress }: { progress: Animated.SharedValue<number> }) => {
+const AnimatedIcon = ({ progress }: { progress: SharedValue<number> }) => {
   // `interpolate` is a helper function to map a value from one range to another.
   // Here, we map the `progress` value (0-1) to the correct `translateY` and `rotate` values.
   const topBarStyle = useAnimatedStyle(() => ({
@@ -72,57 +73,62 @@ const AnimatedIcon = ({ progress }: { progress: Animated.SharedValue<number> }) 
   );
 };
 
+import { SignedIn, SignedOut, useClerk, useUser } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
+
+// ... (imports)
+
 const HamburgerMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // A shared value to drive all animations in this component, from the icon to the panel.
   const progress = useSharedValue(0);
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const router = useRouter();
 
   const toggleMenu = () => {
     const toValue = isOpen ? 0 : 1;
-    // `withTiming` creates a duration-based animation.
     progress.value = withTiming(toValue, { duration: 300 });
     setIsOpen(!isOpen);
   };
 
-  // A pan gesture to detect swipes on the menu panel.
+  const handleSignOut = async () => {
+    await signOut();
+    toggleMenu();
+  };
+
+  const handleNavigation = (path: any) => {
+    toggleMenu();
+    router.push(path);
+  };
+
   const panGesture = Gesture.Pan().onEnd((event) => {
-    // If the user swipes more than 50 pixels to the right, close the menu.
     if (event.translationX > 50) {
       runOnJS(toggleMenu)();
     }
   });
 
   return (
-    // This container positions the hamburger icon absolutely on the screen.
     <View style={styles.menuContainer}>
-      {/* This is the hamburger icon, which is only visible when the menu is closed.
-          We hide it when the menu is open because the Modal will cover it anyway,
-          and we render a new, pressable icon inside the Modal. */}
       {!isOpen && (
         <Pressable onPress={toggleMenu} style={styles.iconContainer}>
           <AnimatedIcon progress={progress} />
         </Pressable>
       )}
 
-      {/* The `Modal` component renders its content in a new native view on top of the app.
-          This is crucial for overlays like menus and dialogs. */}
       <Modal
         transparent
         visible={isOpen}
-        onRequestClose={toggleMenu} // For Android back button handling.
-        animationType="none" // We handle our own animations with Reanimated.
+        onRequestClose={toggleMenu}
+        animationType="none"
       >
-        {/* On Android, gestures inside a Modal require wrapping with GestureHandlerRootView. */}
         <GestureHandlerRootView style={{ flex: 1 }}>
           <Animated.View
             style={styles.modalContainer}
             entering={FadeIn}
             exiting={FadeOut}
           >
-            {/* This pressable acts as a full-screen backdrop that closes the menu when tapped. */}
             <Pressable style={StyleSheet.absoluteFill} onPress={toggleMenu} />
 
-            {/* The side panel containing the menu content. */}
             <GestureDetector gesture={panGesture}>
               <Animated.View
                 style={styles.panel}
@@ -130,16 +136,26 @@ const HamburgerMenu = () => {
                 exiting={SlideOutRight.duration(300)}
               >
                 <BlurView intensity={90} tint="dark" style={styles.blurContainer}>
-                  <Pressable style={styles.menuItem} onPress={toggleMenu}>
-                    <ThemedText type="defaultSemiBold">Login</ThemedText>
-                  </Pressable>
+                  <SignedIn>
+                    <View style={styles.userInfo}>
+                      <ThemedText style={styles.userEmail}>{user?.primaryEmailAddress?.emailAddress}</ThemedText>
+                    </View>
+                    <Pressable style={styles.menuItem} onPress={handleSignOut}>
+                      <ThemedText type="defaultSemiBold">Sign Out</ThemedText>
+                    </Pressable>
+                  </SignedIn>
+                  <SignedOut>
+                    <Pressable style={styles.menuItem} onPress={() => handleNavigation('/(auth)/sign-in')}>
+                      <ThemedText type="defaultSemiBold">Sign In</ThemedText>
+                    </Pressable>
+                    <Pressable style={styles.menuItem} onPress={() => handleNavigation('/(auth)/sign-up')}>
+                      <ThemedText type="defaultSemiBold">Sign Up</ThemedText>
+                    </Pressable>
+                  </SignedOut>
                 </BlurView>
               </Animated.View>
             </GestureDetector>
 
-            {/* This is the interactive 'X' icon, visible only when the menu is open.
-                It's rendered *inside* the Modal so it's on top of the backdrop and panel,
-                making it pressable. It's positioned absolutely to match the original icon's location. */}
             <Pressable
               onPress={toggleMenu}
               style={[styles.iconContainer, styles.iconPosition]}
@@ -158,14 +174,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     right: 16,
-    zIndex: 100, // High zIndex to ensure it's above other screen content.
+    zIndex: 100,
   },
-  // This positions the "X" icon inside the modal at the same place as the hamburger icon.
   iconPosition: {
     position: 'absolute',
     top: 60,
     right: 16,
-    zIndex: 1, // Ensures the icon is on top of the sliding panel within the modal.
+    zIndex: 1,
   },
   iconContainer: {
     width: 44,
@@ -202,6 +217,16 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  userInfo: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 10,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#ccc',
   },
 });
 

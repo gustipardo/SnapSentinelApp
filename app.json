@@ -43,6 +43,9 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "API_URL": "https://7ndcp9upw7.execute-api.us-east-1.amazonaws.com/alerts"
     }
   }
 }

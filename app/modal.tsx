@@ -12,11 +12,12 @@ import Animated, {
   runOnJS,
   ZoomInEasyUp,
 } from "react-native-reanimated";
+import Constants from "expo-constants";
 import { ThemedText } from "@/components/themed-text";
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
-const API_URL = 'https://5tunl41q86.execute-api.us-east-1.amazonaws.com/alerts';
+const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 export default function ModalScreen() {
   // Now we receive `alertId` instead of `imageUrl`.
