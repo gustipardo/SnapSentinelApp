@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import eventEmitter, { EVENTS } from '@/utils/events';
 import Constants from 'expo-constants';
+import { useEffect, useState } from 'react';
 
 // The Alert type expected by the UI components.
 export interface Alert {
@@ -33,7 +34,7 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
  */
 const transformApiData = (apiAlert: ApiAlert): Alert => {
   const date = new Date(apiAlert.timestamp);
-  
+
   // The API `timestamp` can be a full ISO string or a Unix timestamp in seconds.
   // We need to handle both cases.
   const timestampInMs = date.getTime();
@@ -41,7 +42,7 @@ const transformApiData = (apiAlert: ApiAlert): Alert => {
   const formattedDate = isNaN(timestampInMs)
     ? new Date(parseInt(apiAlert.timestamp, 10) * 1000).toLocaleDateString()
     : date.toLocaleDateString();
-  
+
   const formattedTime = isNaN(timestampInMs)
     ? new Date(parseInt(apiAlert.timestamp, 10) * 1000).toLocaleTimeString()
     : date.toLocaleTimeString();
@@ -77,12 +78,12 @@ export const useAlerts = () => {
           throw new Error('Failed to fetch alerts from API');
         }
         const data: { items: ApiAlert[] } = await response.json();
-        
+
         // The API returns items in a random order, so we sort them by timestamp descending.
         const sortedItems = data.items.sort((a, b) => {
-            const timeA = new Date(a.timestamp).getTime() || (parseInt(a.timestamp) * 1000);
-            const timeB = new Date(b.timestamp).getTime() || (parseInt(b.timestamp) * 1000);
-            return timeB - timeA;
+          const timeA = new Date(a.timestamp).getTime() || (parseInt(a.timestamp) * 1000);
+          const timeB = new Date(b.timestamp).getTime() || (parseInt(b.timestamp) * 1000);
+          return timeB - timeA;
         });
 
         const transformedAlerts = sortedItems.map(transformApiData);
@@ -95,6 +96,17 @@ export const useAlerts = () => {
     };
 
     fetchAlerts();
+
+    const onRefresh = () => {
+      console.log('Refreshing alerts due to notification...');
+      fetchAlerts();
+    };
+
+    eventEmitter.on(EVENTS.REFRESH_ALERTS, onRefresh);
+
+    return () => {
+      eventEmitter.off(EVENTS.REFRESH_ALERTS, onRefresh);
+    };
   }, []);
 
   return { alerts, isLoading, error };

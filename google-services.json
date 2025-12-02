@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1023020052676",
+    "project_id": "snapsentinel",
+    "storage_bucket": "snapsentinel.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1023020052676:android:8d1c3e8dc18a6aad8d5991",
+        "android_client_info": {
+          "package_name": "com.snapsentinel.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLpzY51JuBOrwQrzb1edDGTrErnDuND50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
